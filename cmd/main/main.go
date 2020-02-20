@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
-	importBfp "github.com/helmutkemper/gosmImport"
 	iotmakerDbInterface "github.com/helmutkemper/iotmaker.db.interface"
 	iotmakerDbMongodb "github.com/helmutkemper/iotmaker.db.mongodb"
-	"go.mongodb.org/mongo-driver/bson"
+	iotmaker_geo_pbf_import "github.com/helmutkemper/iotmaker.geo.pbf.import"
 	"log"
 )
 
@@ -17,13 +15,12 @@ func main() {
 
 	var db iotmakerDbInterface.DbFunctionsInterface
 	var err error
-	var data = make([]map[string]interface{}, 0)
 
 	db = &iotmakerDbMongodb.DbFunctions{}
-	err = db.Connect("mongodb://0.0.0.0:27017", "geo", []string{"point", "way"})
+	err = db.Connect("mongodb://0.0.0.0:27017", "geo", []string{"point", "way", "polygon"})
 	if err != nil {
 		log.Fatalf("db.connection.error: %v", err.Error())
 	}
 
-	importBfp.ProcessPbfFileInMemory()
+	iotmaker_geo_pbf_import.ProcessPbfFileInMemory(db, "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/binMap.bin")
 }
