@@ -8,6 +8,8 @@ import (
 	iotmaker_geo_pbf_import "github.com/helmutkemper/iotmaker.geo.pbf.import"
 	"io/ioutil"
 	"log"
+	"os"
+	"time"
 )
 
 type Films struct {
@@ -38,12 +40,21 @@ func main() {
 	log.Printf("relations: %v\n", relations)
 	log.Printf("others: %v\n", others)*/
 
-	//importMap.ExtractNodesManager("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/nodesBin")
-	err = importMap.FindAllNodesFrTest("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/nodesBin")
+	start := time.Now()
+	//importMap.FileManagerExtractNodesToBinaryFilesDir("./cmd/main/planet-200210.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/nodesBin")
+	//err = importMap.FileManagerExtractNodesToBinaryFilesDir("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/testBin/")
 	if err != nil {
 		fmt.Printf("%v", err.Error())
+		os.Exit(1)
 	}
 
+	//err = importMap.FindAllNodesForTest("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/planet-200210.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/nodesBin")
+	err = importMap.FindAllNodesForTest("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/testBin/")
+	if err != nil {
+		fmt.Printf("%v", err.Error())
+		os.Exit(2)
+	}
+	fmt.Printf("duração: %v\n", time.Since(start))
 	fmt.Println("terminou ok")
 	//iotmaker_geo_pbf_import.ProcessPbfFileInMemory(db, "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/binMap.bin")
 }
