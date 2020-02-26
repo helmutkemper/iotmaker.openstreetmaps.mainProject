@@ -1,103 +1,139 @@
 package main
 
 import (
-	"encoding/xml"
 	"fmt"
 	iotmakerDbInterface "github.com/helmutkemper/iotmaker.db.interface"
 	iotmakerDbMongodb "github.com/helmutkemper/iotmaker.db.mongodb"
+	iotmaker_geo_osm "github.com/helmutkemper/iotmaker.geo.osm"
 	iotmaker_geo_pbf_import "github.com/helmutkemper/iotmaker.geo.pbf.import"
-	"io/ioutil"
 	"log"
-	"os"
 	"time"
 )
 
-type Films struct {
-	Film string
-}
+var db iotmakerDbInterface.DbFunctionsInterface
 
 func main() {
-
-	var db iotmakerDbInterface.DbFunctionsInterface
 	var err error
 
 	importMap := iotmaker_geo_pbf_import.Import{}
 	db = &iotmakerDbMongodb.DbFunctions{}
-	err = db.Connect("mongodb://0.0.0.0:27017", "geo", []string{"point", "way", "polygon"})
+	err = db.Connect("mongodb://0.0.0.0:27017", "geo", []string{"point", "way", "polygon", "surrounding", "surroundingRight", "surroundingLeft"})
 	if err != nil {
 		log.Fatalf("db.connection.error: %v", err.Error())
 	}
-
-	//      /media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/nodes/13787735.xml
-
-	importMap = iotmaker_geo_pbf_import.Import{}
-	/*err, nodes, ways, relations, others = importMap.CountElements("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/portugal-latest.osm.pbf")
-	if err != nil {
-		log.Fatalf("db.connection.error: %v", err.Error())
-	}
-	log.Printf("nodes: %v\n", nodes)
-	log.Printf("ways: %v\n", ways)
-	log.Printf("relations: %v\n", relations)
-	log.Printf("others: %v\n", others)*/
 
 	start := time.Now()
-	//importMap.FileManagerExtractNodesToBinaryFilesDir("./cmd/main/planet-200210.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/nodesBin")
-	//err = importMap.FileManagerExtractNodesToBinaryFilesDir("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/testBin/")
+	dirPath := "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187763"
+
+	importMap = iotmaker_geo_pbf_import.Import{}
+	err = importMap.SetDirFromBinaryFilesCache(dirPath + "/testBin/")
 	if err != nil {
-		fmt.Printf("%v", err.Error())
-		os.Exit(1)
+		panic(err)
 	}
 
-	//err = importMap.FindAllNodesForTest("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/planet-200210.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/nodesBin")
-	err = importMap.FindAllNodesForTest("/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187762/testBin/")
+	err = importMap.SetMapFilePath(dirPath + "/portugal-latest.osm.pbf")
 	if err != nil {
-		fmt.Printf("%v", err.Error())
-		os.Exit(2)
+		panic(err)
 	}
+
+	//err = importMap.CountElements()
+	//if err != nil {
+	//  panic( err )
+	//}
+
+	//err = importMap.ExtractNodesToBinaryFilesDir()
+	//if err != nil {
+	//  panic( err )
+	//}
+
+	//err = importMap.FindAllNodesForTest()
+	//if err != nil {
+	//  panic( err )
+	//}
+
+	err = importMap.ProcessWaysFromMapFile(processWayFunctionPointer)
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Printf("duração: %v\n", time.Since(start))
 	fmt.Println("terminou ok")
-	//iotmaker_geo_pbf_import.ProcessPbfFileInMemory(db, "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/portugal-latest.osm.pbf", "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/binMap.bin")
+
 }
 
-type NodesTagStt struct {
-	XMLName   xml.Name     `xml:"node"`
-	Id        int64        `xml:"id,attr"`
-	Lat       float64      `xml:"lat,attr"`
-	Lon       float64      `xml:"lon,attr"`
-	Version   int64        `xml:"version,attr"`
-	TimeStamp string       `xml:"timestamp,attr"`
-	ChangeSet string       `xml:"changeset,attr"`
-	UId       int64        `xml:"uid,attr"`
-	User      string       `xml:"user,attr"`
-	Tag       []TagsTagStt `xml:"tag"`
+var dis = iotmaker_geo_osm.DistanceStt{}
+var disMin = iotmaker_geo_osm.DistanceStt{}
+
+func init() {
+	dis.SetMeters(100)
+	disMin.SetMeters(50)
 }
 
-type TagsTagStt struct {
-	XMLName xml.Name `xml:"tag"`
-	Key     string   `xml:"k,attr"`
-	Value   string   `xml:"v,attr"`
-}
-
-type OsmNodeTagStt struct {
-	XMLName   xml.Name    `xml:"osm"`
-	Version   string      `xml:"version,attr"`
-	Generator string      `xml:"generator,attr"`
-	TimeStamp string      `xml:"timestamp,attr"`
-	Node      NodesTagStt `xml:"node"`
-}
-
-func test() int64 {
-	var body []byte
+func processWayFunctionPointer(wayConverted iotmaker_geo_pbf_import.WayConverted) {
 	var err error
 
-	fileName := "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187761/nodes/13787735.xml"
-	nodeRemote := OsmNodeTagStt{}
+	wayToDb := iotmaker_geo_osm.WayStt{}
+	polygonSurroundingToDb := iotmaker_geo_osm.PolygonStt{}
+	polygonSurroundingRightToDb := iotmaker_geo_osm.PolygonStt{}
+	polygonSurroundingLeftToDb := iotmaker_geo_osm.PolygonStt{}
 
-	body, err = ioutil.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("test.error: %v", err.Error())
+	for k := range wayConverted.Node {
+		err = wayToDb.AddLngLatDegrees(wayConverted.Node[k][0], wayConverted.Node[k][1])
+		if err != nil {
+			panic(err)
+		}
 	}
-	err = xml.Unmarshal(body, &nodeRemote)
 
-	return nodeRemote.Node.Id
+	for key, value := range wayConverted.Tags {
+		wayToDb.AddTag(key, value)
+	}
+
+	wayToDb.SetId(wayConverted.ID)
+	err = wayToDb.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	wayToDb.MakeGeoJSonFeature()
+	err = db.Insert("way", wayToDb)
+	if err != nil {
+		panic(err)
+	}
+
+	err, polygonSurroundingToDb = wayToDb.MakePolygonSurroundings(dis, disMin)
+	if err != nil {
+		panic(err)
+	}
+
+	polygonSurroundingToDb.MakeGeoJSonFeature()
+	err = db.Insert("surrounding", wayToDb)
+	if err != nil {
+		panic(err)
+	}
+
+	err, polygonSurroundingLeftToDb = wayToDb.MakePolygonSurroundingsLeft(dis, disMin)
+	if err != nil {
+		panic(err)
+	}
+
+	polygonSurroundingLeftToDb.MakeGeoJSonFeature()
+	err = db.Insert("surroundingLeft", wayToDb)
+	if err != nil {
+		panic(err)
+	}
+
+	err, polygonSurroundingRightToDb = wayToDb.MakePolygonSurroundingsRight(dis, disMin)
+	if err != nil {
+		panic(err)
+	}
+
+	polygonSurroundingRightToDb.MakeGeoJSonFeature()
+	err = db.Insert("surroundingRight", wayToDb)
+	if err != nil {
+		panic(err)
+	}
+
+	//fazer:
+	//visible
+
 }
