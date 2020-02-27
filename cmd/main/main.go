@@ -16,6 +16,8 @@ func main() {
 	var err error
 
 	importMap := iotmaker_geo_pbf_import.Import{}
+	importMap.DontFindDuplicatedId = true
+
 	db = &iotmakerDbMongodb.DbFunctions{}
 	err = db.Connect("mongodb://0.0.0.0:27017", "geo", []string{"point", "way", "polygon", "surrounding", "surroundingRight", "surroundingLeft"})
 	if err != nil {
@@ -36,10 +38,10 @@ func main() {
 		panic(err)
 	}
 
-	//err = importMap.CountElements()
-	//if err != nil {
-	//  panic( err )
-	//}
+	err = importMap.CountElements()
+	if err != nil {
+		panic(err)
+	}
 
 	//err = importMap.ExtractNodesToBinaryFilesDir()
 	//if err != nil {
@@ -98,6 +100,11 @@ func processWayFunctionPointer(wayConverted iotmaker_geo_pbf_import.WayConverted
 	err = db.Insert("way", wayToDb)
 	if err != nil {
 		panic(err)
+	}
+
+	return
+	if len(wayToDb.Loc) < 3 {
+		return
 	}
 
 	err, polygonSurroundingToDb = wayToDb.MakePolygonSurroundings(dis, disMin)
