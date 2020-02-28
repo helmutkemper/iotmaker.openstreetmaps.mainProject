@@ -40,10 +40,10 @@ func main() {
 		panic(err)
 	}
 
-	//err = importMap.CountElements()
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = importMap.CountElements()
+	if err != nil {
+		panic(err)
+	}
 
 	//err = importMap.ExtractNodesToBinaryFilesDir()
 	//if err != nil {
@@ -60,10 +60,10 @@ func main() {
 	//	panic(err)
 	//}
 
-	//err = importMap.GetAllWaysFromMap( getAllWaysAndPutIntoDb )
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = importMap.GetAllWaysFromMap(getAllWaysAndPutIntoDb)
+	if err != nil {
+		panic(err)
+	}
 
 	err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays)
 
@@ -253,7 +253,7 @@ func getAllWaysAndPutIntoDb(way osmpbf.Way) {
 	wayToDb.Loc = fakeData
 	wayToDb.Rad = fakeData
 
-	err = db.WayInsert(wayToDb)
+	err = db.WayToPopulateInsert(wayToDb)
 	if err != nil {
 		panic(err)
 	}
