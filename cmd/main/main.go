@@ -7,6 +7,7 @@ import (
 	iotmaker_geo_osm "github.com/helmutkemper/iotmaker.geo.osm"
 	iotmaker_geo_pbf_import "github.com/helmutkemper/iotmaker.geo.pbf.import"
 	"github.com/helmutkemper/osmpbf"
+	"github.com/helmutkemper/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"log"
 	"time"
@@ -31,9 +32,9 @@ func main() {
 
 	importMap = iotmaker_geo_pbf_import.Import{}
 	err = importMap.SetDirFromBinaryFilesCache(dirPath + "/testBin/")
-	if err != nil {
-		panic(err)
-	}
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	err = importMap.SetMapFilePath(dirPath + "/portugal-latest.osm.pbf")
 	if err != nil {
@@ -60,12 +61,15 @@ func main() {
 	//	panic(err)
 	//}
 
-	err = importMap.GetAllWaysFromMap(getAllWaysAndPutIntoDb)
+	//err = importMap.GetAllWaysFromMap(getAllWaysAndPutIntoDb)
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays)
 	if err != nil {
 		panic(err)
 	}
-
-	err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays)
 
 	fmt.Printf("duração: %v\n", time.Since(start))
 	fmt.Println("terminou ok")
@@ -76,13 +80,16 @@ var dis = iotmaker_geo_osm.DistanceStt{}
 var disMin = iotmaker_geo_osm.DistanceStt{}
 
 func init() {
-	dis.SetMeters(100)
-	disMin.SetMeters(50)
+	dis.SetMeters(50)
+	disMin.SetMeters(25)
 }
 
 func getAllNodesToPopulateWays(node osmpbf.Node) {
 	dataTmpWay := make([]osmpbf.Way, 0)
 	var dataWay []iotmaker_geo_osm.WayStt
+
+	node.Lon = util.Round(node.Lon, 0.5, 8.0)
+	node.Lat = util.Round(node.Lat, 0.5, 8.0)
 
 	err := db.WayTmpFind(bson.M{"nodeids": node.ID}, &dataTmpWay)
 	if err != nil {
@@ -90,11 +97,10 @@ func getAllNodesToPopulateWays(node osmpbf.Node) {
 	}
 
 	for wayKey := range dataTmpWay {
-
 		wayId := dataTmpWay[wayKey].ID
 		wayNodesList := dataTmpWay[wayKey].NodeIDs
 
-		err = db.WayFind(bson.M{"id": wayId}, &dataWay)
+		err = db.WayToPopulateFind(bson.M{"id": wayId}, &dataWay)
 		if err != nil {
 			panic(err)
 		}
@@ -139,12 +145,12 @@ func getAllNodesToPopulateWays(node osmpbf.Node) {
 						panic(err)
 					}
 
+					dataWay[0].MakeGeoJSonFeature()
 					err, _ = dataWay[0].MakeMD5()
 					if err != nil {
 						panic(err)
 					}
 
-					dataWay[0].MakeGeoJSonFeature()
 					err = db.WayInsert(dataWay[0])
 					if err != nil {
 						panic(err)
