@@ -15,6 +15,11 @@ import (
 
 var db iotmaker_db_geo_mongodb.DbFunctionsFromMapInterface
 
+/*
+nodes: 5.765.970.256
+ways: 639.271.137
+relations: 7.514.422
+*/
 //{"tag.admin_level": "2"}
 func main() {
 	var err error
@@ -36,15 +41,16 @@ func main() {
 	//	panic(err)
 	//}
 
-	err = importMap.SetMapFilePath(dirPath + "/portugal-latest.osm.pbf")
+	//err = importMap.SetMapFilePath(dirPath + "/portugal-latest.osm.pbf")
+	err = importMap.SetMapFilePath(dirPath + "/planet-200210.osm.pbf")
 	if err != nil {
 		panic(err)
 	}
 
-	err = importMap.CountElements()
-	if err != nil {
-		panic(err)
-	}
+	//err = importMap.CountElements()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	//err = importMap.ExtractNodesToBinaryFilesDir()
 	//if err != nil {
@@ -85,6 +91,22 @@ func init() {
 }
 
 func getAllNodesToPopulateWays(node osmpbf.Node) {
+	// lon
+	//-9.525146484375
+	//-6.075439453125
+
+	// lat
+	//42.27730877423709
+	//36.78289206199065
+
+	if node.Lon < -9.52514648 || node.Lon > -6.07543945 {
+		return
+	}
+
+	if node.Lat < 36.78289206 || node.Lat > 42.27730877 {
+		return
+	}
+
 	dataTmpWay := make([]osmpbf.Way, 0)
 	var dataWay []iotmaker_geo_osm.WayStt
 
