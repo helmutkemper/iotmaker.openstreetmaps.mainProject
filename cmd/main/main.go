@@ -27,13 +27,14 @@ func main() {
 	importMap := iotmaker_geo_pbf_import.Import{}
 	importMap.DontFindDuplicatedId = true
 
-	err, db = factoryGeoDbMongoDb.NewConnection("mongodb://0.0.0.0:27017", "geo")
+	err, db = factoryGeoDbMongoDb.NewConnection("mongodb://0.0.0.0:27017", "globo")
 	if err != nil {
 		log.Fatalf("db.connection.error: %v", err.Error())
 	}
 
 	start := time.Now()
 	dirPath := "/media/kemper/c5d4fd1f-1a7e-4bdd-8124-e2ad60e187763"
+	dirPath = "/home/kemper/osm"
 
 	importMap = iotmaker_geo_pbf_import.Import{}
 	err = importMap.SetDirFromBinaryFilesCache(dirPath + "/testBin/")
@@ -67,14 +68,18 @@ func main() {
 	//	panic(err)
 	//}
 
-	//err = importMap.GetAllWaysFromMap(getAllWaysAndPutIntoDb)
-	//if err != nil {
-	//	panic(err)
-	//}
+	var step int64 = 500000
+	var i int64 = 0
+	for i = 0; i <= 639271137; i += step {
+		err = importMap.GetAllWaysFromMap(getAllWaysAndPutIntoDb, i, i+step)
+		if err != nil {
+			panic(err)
+		}
 
-	err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays)
-	if err != nil {
-		panic(err)
+		err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	fmt.Printf("duração: %v\n", time.Since(start))
@@ -90,7 +95,7 @@ func init() {
 	disMin.SetMeters(25)
 }
 
-func getAllNodesToPopulateWays(node osmpbf.Node) {
+func getAllNodesToPopulateWays(node osmpbf.Node) int64 {
 	// lon
 	//-9.525146484375
 	//-6.075439453125
@@ -99,13 +104,13 @@ func getAllNodesToPopulateWays(node osmpbf.Node) {
 	//42.27730877423709
 	//36.78289206199065
 
-	if node.Lon < -9.52514648 || node.Lon > -6.07543945 {
-		return
-	}
+	//if node.Lon < -9.52514648 || node.Lon > -6.07543945 {
+	//	return
+	//}
 
-	if node.Lat < 36.78289206 || node.Lat > 42.27730877 {
-		return
-	}
+	//if node.Lat < 36.78289206 || node.Lat > 42.27730877 {
+	//	return
+	//}
 
 	dataTmpWay := make([]osmpbf.Way, 0)
 	var dataWay []iotmaker_geo_osm.WayStt
@@ -113,7 +118,16 @@ func getAllNodesToPopulateWays(node osmpbf.Node) {
 	node.Lon = util.Round(node.Lon, 0.5, 8.0)
 	node.Lat = util.Round(node.Lat, 0.5, 8.0)
 
-	err := db.WayTmpFind(bson.M{"nodeids": node.ID}, &dataTmpWay)
+	err, count := db.WayTmpCount(bson.M{})
+	if err != nil {
+		panic(err)
+	}
+
+	if count == 0 {
+		return count
+	}
+
+	err = db.WayTmpFind(bson.M{"nodeids": node.ID}, &dataTmpWay)
 	if err != nil {
 		panic(err)
 	}
@@ -183,7 +197,7 @@ func getAllNodesToPopulateWays(node osmpbf.Node) {
 					polygonSurroundingLeftToDb := iotmaker_geo_osm.PolygonStt{}
 
 					if len(dataWay[0].Loc) < 3 {
-						return
+						return count
 					}
 
 					err, polygonSurroundingToDb = dataWay[0].MakePolygonSurroundings(dis, disMin)
@@ -255,15 +269,26 @@ func getAllNodesToPopulateWays(node osmpbf.Node) {
 		}
 
 	}
+
+	return count
 }
 
 func getAllWaysAndPutIntoDb(way osmpbf.Way) {
+
+	err, count := db.WayCount(bson.M{"id": way.ID})
+	if err != nil {
+		panic(err)
+	}
+
+	if count != 0 {
+		return
+	}
 
 	if way.Info.Visible == false {
 		return
 	}
 
-	err := db.WayTmpInsert(way)
+	err = db.WayTmpInsert(way)
 	if err != nil {
 		panic(err)
 	}
