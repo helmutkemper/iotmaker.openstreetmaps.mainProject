@@ -75,11 +75,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		fmt.Printf("GetAllWaysFromMap().duração: %v\n", time.Since(start))
 
 		err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays)
 		if err != nil {
 			panic(err)
 		}
+		fmt.Printf("GetAllNodesFromMap().duração: %v\n", time.Since(start))
 	}
 
 	fmt.Printf("duração: %v\n", time.Since(start))
