@@ -10,6 +10,7 @@ import (
 	"github.com/helmutkemper/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -70,18 +71,34 @@ func main() {
 
 	var step int64 = 500000
 	var i int64 = 0
-	for i = 0; i <= 639271137; i += step {
+	var wg sync.WaitGroup
+
+	for i = 0; i < 639271137; i += step {
+
+		var nodesStep int64 = 5765970256 / 10
+		var iNode int64 = 0
+
+		for iNode = 0; iNode < 5765970256; iNode += nodesStep {
+
+			wg.Add(1)
+			go func() {
+				startCounter := iNode
+				endCounter := startCounter + nodesStep
+				err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays, startCounter, endCounter)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Printf("GetAllNodesFromMap().duração: %v\n", time.Since(start))
+				wg.Done()
+			}()
+
+		}
+		wg.Wait()
 		err = importMap.GetAllWaysFromMap(getAllWaysAndPutIntoDb, i, i+step)
 		if err != nil {
 			panic(err)
 		}
 		fmt.Printf("GetAllWaysFromMap().duração: %v\n", time.Since(start))
-
-		err = importMap.GetAllNodesFromMap(getAllNodesToPopulateWays)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("GetAllNodesFromMap().duração: %v\n", time.Since(start))
 	}
 
 	fmt.Printf("duração: %v\n", time.Since(start))
@@ -154,7 +171,7 @@ func getAllNodesToPopulateWays(node osmpbf.Node) int64 {
 				dataWay[0].Loc[nodeKey] = [2]float64{node.Lon, node.Lat}
 				dataWay[0].Rad[nodeKey] = [2]float64{iotmaker_geo_osm.DegreesToRadians(node.Lon), iotmaker_geo_osm.DegreesToRadians(node.Lat)}
 
-				err = db.WayToPopulateUpdateLocations(dataWayId, dataWay[0].Loc, dataWay[0].Rad)
+				err = db.WayToPopulateUpdateLocations(dataWayId, int64(nodeKey), dataWay[0].Loc[nodeKey], dataWay[0].Rad[nodeKey])
 				if err != nil {
 					panic(err)
 				}
@@ -194,77 +211,77 @@ func getAllNodesToPopulateWays(node osmpbf.Node) int64 {
 						panic(err)
 					}
 
-					polygonSurroundingToDb := iotmaker_geo_osm.PolygonStt{}
-					polygonSurroundingRightToDb := iotmaker_geo_osm.PolygonStt{}
-					polygonSurroundingLeftToDb := iotmaker_geo_osm.PolygonStt{}
-
-					if len(dataWay[0].Loc) < 3 {
-						return count
-					}
-
-					err, polygonSurroundingToDb = dataWay[0].MakePolygonSurroundings(dis, disMin)
-					if err != nil {
-						panic(err)
-					}
-
-					err = polygonSurroundingToDb.Init()
-					if err != nil {
-						panic(err)
-					}
-
-					polygonSurroundingToDb.MakeGeoJSonFeature()
-					err, _ = polygonSurroundingToDb.MakeMD5()
-					if err != nil {
-						panic(err)
-					}
-
-					err = db.SurroundingInsert(polygonSurroundingToDb)
-					if err != nil {
-						panic(err)
-					}
-
-					err, polygonSurroundingLeftToDb = dataWay[0].MakePolygonSurroundingsLeft(dis, disMin)
-					if err != nil {
-						panic(err)
-					}
-
-					err = polygonSurroundingLeftToDb.Init()
-					if err != nil {
-						panic(err)
-					}
-
-					polygonSurroundingLeftToDb.MakeGeoJSonFeature()
-					err, _ = polygonSurroundingLeftToDb.MakeMD5()
-					if err != nil {
-						panic(err)
-					}
-
-					err = db.SurroundingLeftInsert(polygonSurroundingLeftToDb)
-					if err != nil {
-						panic(err)
-					}
-
-					err, polygonSurroundingRightToDb = dataWay[0].MakePolygonSurroundingsRight(dis, disMin)
-					if err != nil {
-						panic(err)
-					}
-
-					err = polygonSurroundingRightToDb.Init()
-					if err != nil {
-						panic(err)
-					}
-
-					polygonSurroundingRightToDb.MakeGeoJSonFeature()
-
-					err, _ = polygonSurroundingRightToDb.MakeMD5()
-					if err != nil {
-						panic(err)
-					}
-
-					err = db.SurroundingRightInsert(polygonSurroundingRightToDb)
-					if err != nil {
-						panic(err)
-					}
+					//polygonSurroundingToDb := iotmaker_geo_osm.PolygonStt{}
+					//polygonSurroundingRightToDb := iotmaker_geo_osm.PolygonStt{}
+					//polygonSurroundingLeftToDb := iotmaker_geo_osm.PolygonStt{}
+					//
+					//if len(dataWay[0].Loc) < 3 {
+					//	return count
+					//}
+					//
+					//err, polygonSurroundingToDb = dataWay[0].MakePolygonSurroundings(dis, disMin)
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err = polygonSurroundingToDb.Init()
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//polygonSurroundingToDb.MakeGeoJSonFeature()
+					//err, _ = polygonSurroundingToDb.MakeMD5()
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err = db.SurroundingInsert(polygonSurroundingToDb)
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err, polygonSurroundingLeftToDb = dataWay[0].MakePolygonSurroundingsLeft(dis, disMin)
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err = polygonSurroundingLeftToDb.Init()
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//polygonSurroundingLeftToDb.MakeGeoJSonFeature()
+					//err, _ = polygonSurroundingLeftToDb.MakeMD5()
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err = db.SurroundingLeftInsert(polygonSurroundingLeftToDb)
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err, polygonSurroundingRightToDb = dataWay[0].MakePolygonSurroundingsRight(dis, disMin)
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err = polygonSurroundingRightToDb.Init()
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//polygonSurroundingRightToDb.MakeGeoJSonFeature()
+					//
+					//err, _ = polygonSurroundingRightToDb.MakeMD5()
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//err = db.SurroundingRightInsert(polygonSurroundingRightToDb)
+					//if err != nil {
+					//	panic(err)
+					//}
 				}
 				break
 			}
